@@ -39,6 +39,3 @@ if st.button("Get Advice"):
             st.success("Here's some advice:")
             st.write(output)
 
-
-
-#this is the change i made in app.py
