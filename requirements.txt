@@ -1,3 +1,6 @@
 streamlit
 google-generativeai
 python-dotenv
+
+
+#this is the change i made in requirement.txt

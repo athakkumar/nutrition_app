@@ -38,3 +38,7 @@ if st.button("Get Advice"):
             output = get_nutrition_response(user_input)
             st.success("Here's some advice:")
             st.write(output)
+
+
+
+#this is the change i made in app.py
