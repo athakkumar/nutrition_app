@@ -5,98 +5,99 @@ import io
 from dotenv import load_dotenv
 from PIL import Image
 
-# Load environment variables
+# Load API key and configure Gemini
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
-# Initialize Gemini model
 model = genai.GenerativeModel('gemini-2.0-flash-001')
 
-# Streamlit page setup
+# Streamlit page settings
 st.set_page_config(
     page_title="Nutrition Assistant",
     page_icon="🥦",
     layout="centered"
 )
 
-# Custom CSS for UI polish
+# Custom CSS for compact layout & button polish
 st.markdown("""
     <style>
-    .main {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
     .block-container {
         padding-top: 1rem;
-        padding-bottom: 2rem;
+        padding-bottom: 1rem;
     }
-    h1 {
-        text-align: center;
-        color: #4CAF50;
+    .stTextArea textarea {
+        min-height: 100px !important;
+    }
+    .st-expanderContent {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    img {
+        max-height: 250px;
+        object-fit: contain;
     }
     .stButton button {
-    background-color: #4CAF50;
-    color: white;
-    border-radius: 8px;
-    font-size: 16px;
-    padding: 0.5em 2em;
-    margin-top: 1em;
-    border: none;
-    outline: none;
-    box-shadow: none;
-    transition: background-color 0.2s ease-in-out;
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 8px;
+        font-size: 16px;
+        padding: 0.5em 2em;
+        margin-top: 0.5em;
+        border: none;
+        outline: none;
+        box-shadow: none;
+        transition: background-color 0.2s ease-in-out;
     }
-
     .stButton button:hover {
-    background-color: #45a049;
-    color: white;
+        background-color: #45a049;
+        color: white;
     }
-
-    .stButton button:focus, 
-    .stButton button:active {
-    background-color: #45a049 !important;
-    color: white !important;
-    border: none;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.4); /* soft green glow */
+    .stButton button:focus, .stButton button:active {
+        background-color: #45a049 !important;
+        color: white !important;
+        border: none;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.4);
     }
     </style>
 """, unsafe_allow_html=True)
 
+# App Title
+st.title("🥦 AI Nutrition Assistant")
+st.caption("Ask about meals, calories, or upload food images for estimates!")
 
-# Title and instructions
-st.title("🥦 Gemini-Powered Nutrition Assistant")
-st.subheader("Ask me anything about your meals, calories, or healthy food choices.")
-st.caption("You can also upload a food image to get a calorie estimate!")
+# Main input section
+st.markdown("### 📝 Your Question")
+user_input = st.text_area(
+    label="",
+    placeholder="e.g. Suggest a healthy dinner with high protein.",
+    height=80
+)
 
-# User text input
-user_input = st.text_area("📝 Your Question", placeholder="e.g. What should I eat for a high-protein breakfast?", height=150)
-
-# Image upload
-uploaded_image = st.file_uploader("📷 Upload a Food Image (optional)", type=["jpg", "jpeg", "png"])
+uploaded_image = st.file_uploader("📷 Upload Food Image", type=["jpg", "jpeg", "png"])
 image = None
-
 if uploaded_image:
     image = Image.open(uploaded_image)
-    st.image(image, caption="📸 Uploaded Image Preview", use_container_width=True)
 
-# Nutrition function
+# Submit button stays right below inputs
+submit = st.button("🍽️ Get Nutrition Advice")
+
+# Image preview moved to sidebar
+if uploaded_image:
+    with st.sidebar:
+        st.markdown("### 📸 Preview")
+        st.image(image, use_container_width=True, caption=None)
+
+
+
+# Gemini Call Function
 def get_nutrition_response(user_input: str, image=None):
     prompt = f"""
-    You are a certified nutritionist chatbot. Help the user based on the following question.
+    You are a certified nutritionist chatbot. Help the user with the question below.
 
-    User Question: {user_input}
+    Question: {user_input}
 
-    If an image is provided, analyze it and list any visible food items with estimated calories and total calories.
-    For example:
-    1. 2 Apples: 50 kcal
-    2. 50grams rice: 100 kcal
-    _ _ _ _ so on.
-    Total calories: 150 kcal
-
-    Also, offer health tips, diet suggestions, or related information.
-
-    Respond in a friendly and informative way.
+    If an image is provided, identify food items and estimate calories.
+    Respond in a friendly, helpful, and clear way.
     """
     inputs = [prompt]
 
@@ -104,26 +105,25 @@ def get_nutrition_response(user_input: str, image=None):
         image_bytes = io.BytesIO()
         image.save(image_bytes, format='PNG')
         image_bytes = image_bytes.getvalue()
-        inputs.append({
-            "mime_type": "image/png",
-            "data": image_bytes
-        })
+        inputs.append({"mime_type": "image/png", "data": image_bytes})
 
     try:
         response = model.generate_content(inputs)
         return response.text
     except Exception as e:
-        return f"⚠️ Oops! Something went wrong:\n\n**{str(e)}**"
+        return f"⚠️ Error: {str(e)}"
 
-# Submit button
-if st.button("🍽️ Get Nutrition Advice"):
+# Submit Button
+output = None
+if submit:
     if not user_input and not uploaded_image:
         st.warning("Please enter a question or upload an image.")
     else:
         user_input = user_input or "Analyze this image for nutritional content."
-
-        with st.spinner("Analyzing your food... 🍳🥗🍎"):
+        with st.spinner("Analyzing... 🥗"):
             output = get_nutrition_response(user_input, image)
 
-        st.markdown("### 🧠 Gemini's Response")
+# Display Gemini Response (collapsible)
+if output:
+    with st.expander("🧠 AI's Response", expanded=True):
         st.write(output)
